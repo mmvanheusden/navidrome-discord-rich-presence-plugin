@@ -39,7 +39,7 @@ const (
 	navidromeLogoURL = "https://raw.githubusercontent.com/navidrome/website/refs/heads/master/assets/icons/logo.webp"
 
 	// Small icons 128x128
-	navidromeSmallLogoURL = "https://raw.githubusercontent.com/mmvanheusden/discord-rich-presence-plugin/navidrome_promo/assets/navidrome_logo.png"
+	navidromeSmallLogoURL = "https://raw.githubusercontent.com/mmvanheusden/discord-rich-presence-plugin/refs/heads/navidrome_promo/assets/navidrome_logo.png"
 	pauseIconURL          = "https://raw.githubusercontent.com/navidrome/discord-rich-presence-plugin/800bfacfb8e85c33692373b10ddbd27388f262d2/assets/pause.png"
 )
 
