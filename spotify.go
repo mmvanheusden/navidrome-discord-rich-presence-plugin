@@ -90,7 +90,7 @@ func resolveSpotifyURL(track scrobbler.TrackInfo) string {
 
 	// M: ALWAYS RETURN SPOTIFY SEARCH URL, BECASE WE DON'T BOTHER.
 	// 3. Fallback to search URL
-	searchURL := spotifySearchURL(track.Artist, track.Title)
+	searchURL := spotifySearchURL(track.Title, track.Artist)
 	_ = host.CacheSetString(cacheKey, searchURL, spotifyCacheTTLMiss)
 	pdk.Log(pdk.LogInfo, fmt.Sprintf("Spotify resolution missed, falling back to search URL for %q - %q: %s", primary, track.Title, searchURL))
 	return searchURL
