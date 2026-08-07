@@ -147,31 +147,32 @@ func resolveSpotifyURL(track scrobbler.TrackInfo) string {
 		return cached
 	}
 
-	pdk.Log(pdk.LogDebug, fmt.Sprintf("Resolving Spotify URL for: artist=%q title=%q album=%q mbid=%q", primary, track.Title, track.Album, track.MBZRecordingID))
+	//pdk.Log(pdk.LogDebug, fmt.Sprintf("Resolving Spotify URL for: artist=%q title=%q album=%q mbid=%q", primary, track.Title, track.Album, track.MBZRecordingID))
+	//
+	//// 1. Try MBID lookup (most accurate)
+	//if track.MBZRecordingID != "" {
+	//	if trackID := trySpotifyFromMBID(track.MBZRecordingID); trackID != "" {
+	//		directURL := "https://open.spotify.com/track/" + trackID
+	//		_ = host.CacheSetString(cacheKey, directURL, spotifyCacheTTLHit)
+	//		pdk.Log(pdk.LogInfo, fmt.Sprintf("Resolved Spotify via MBID for %q: %s", track.Title, directURL))
+	//		return directURL
+	//	}
+	//	pdk.Log(pdk.LogDebug, "MBID lookup did not return a Spotify ID, trying metadata…")
+	//} else {
+	//	pdk.Log(pdk.LogDebug, "No MBZRecordingID available, skipping MBID lookup")
+	//}
+	//
+	//// 2. Try metadata lookup
+	//if primary != "" && track.Title != "" {
+	//	if trackID := trySpotifyFromMetadata(primary, track.Title, track.Album); trackID != "" {
+	//		directURL := "https://open.spotify.com/track/" + trackID
+	//		_ = host.CacheSetString(cacheKey, directURL, spotifyCacheTTLHit)
+	//		pdk.Log(pdk.LogInfo, fmt.Sprintf("Resolved Spotify via metadata for %q - %q: %s", primary, track.Title, directURL))
+	//		return directURL
+	//	}
+	//}
 
-	// 1. Try MBID lookup (most accurate)
-	if track.MBZRecordingID != "" {
-		if trackID := trySpotifyFromMBID(track.MBZRecordingID); trackID != "" {
-			directURL := "https://open.spotify.com/track/" + trackID
-			_ = host.CacheSetString(cacheKey, directURL, spotifyCacheTTLHit)
-			pdk.Log(pdk.LogInfo, fmt.Sprintf("Resolved Spotify via MBID for %q: %s", track.Title, directURL))
-			return directURL
-		}
-		pdk.Log(pdk.LogDebug, "MBID lookup did not return a Spotify ID, trying metadata…")
-	} else {
-		pdk.Log(pdk.LogDebug, "No MBZRecordingID available, skipping MBID lookup")
-	}
-
-	// 2. Try metadata lookup
-	if primary != "" && track.Title != "" {
-		if trackID := trySpotifyFromMetadata(primary, track.Title, track.Album); trackID != "" {
-			directURL := "https://open.spotify.com/track/" + trackID
-			_ = host.CacheSetString(cacheKey, directURL, spotifyCacheTTLHit)
-			pdk.Log(pdk.LogInfo, fmt.Sprintf("Resolved Spotify via metadata for %q - %q: %s", primary, track.Title, directURL))
-			return directURL
-		}
-	}
-
+	// M: ALWAYS RETURN SPOTIFY SEARCH URL, BECASE WE DON'T BOTHER.
 	// 3. Fallback to search URL
 	searchURL := spotifySearchURL(track.Artist, track.Title)
 	_ = host.CacheSetString(cacheKey, searchURL, spotifyCacheTTLMiss)
