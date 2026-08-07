@@ -38,7 +38,9 @@ const (
 	// navidromeLogoURL is used as fallback large image when track artwork is unavailable.
 	navidromeLogoURL = "https://raw.githubusercontent.com/navidrome/website/refs/heads/master/assets/icons/logo.webp"
 
-	pauseIconURL = "https://raw.githubusercontent.com/navidrome/discord-rich-presence-plugin/800bfacfb8e85c33692373b10ddbd27388f262d2/assets/pause.png"
+	// Small icons 128x128
+	navidromeSmallLogoURL = "https://raw.githubusercontent.com/mmvanheusden/discord-rich-presence-plugin/navidrome_promo/assets/navidrome_logo.png"
+	pauseIconURL          = "https://raw.githubusercontent.com/navidrome/discord-rich-presence-plugin/800bfacfb8e85c33692373b10ddbd27388f262d2/assets/pause.png"
 )
 
 // Playback states from PlaybackReportRequest.State
@@ -198,6 +200,9 @@ func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequ
 		LargeImage: getImageURL(input.Username, input.Track),
 		LargeText:  input.Track.Album,
 		LargeURL:   spotifyURL,
+		SmallImage: navidromeSmallLogoURL,
+		SmallText:  "Powered by Navidrome",
+		SmallURL:   navidromeWebsiteURL,
 	}
 
 	if paused {

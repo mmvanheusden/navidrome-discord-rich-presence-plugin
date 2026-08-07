@@ -188,7 +188,8 @@ var _ = Describe("discordPlugin", func() {
 				err := plugin.PlaybackReport(baseRequest("playing"))
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(sentPayload).ToNot(ContainSubstring(`"small_image"`))
+				Expect(sentPayload).To(ContainSubstring(`"small_image"`))
+				Expect(sentPayload).To(ContainSubstring(`Powered by Navidrome`))
 				Expect(sentPayload).To(ContainSubstring(`"start":`))
 				Expect(sentPayload).To(ContainSubstring(`"end":`))
 			})
