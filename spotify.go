@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -47,89 +46,6 @@ func spotifySearchURL(terms ...string) string {
 // spotifyCacheKey returns a deterministic cache key for a track's Spotify URL.
 func spotifyCacheKey(artist, title, album string) string {
 	return "spotify.url." + hashKey(strings.ToLower(artist)+"\x00"+strings.ToLower(title)+"\x00"+strings.ToLower(album))
-}
-
-// trySpotifyFromMBID calls the ListenBrainz spotify-id-from-mbid endpoint.
-func trySpotifyFromMBID(mbid string) string {
-	body := fmt.Sprintf(`[{"recording_mbid":%q}]`, mbid)
-	resp, err := host.HTTPSend(host.HTTPRequest{
-		Method:  "POST",
-		URL:     "https://labs.api.listenbrainz.org/spotify-id-from-mbid/json",
-		Headers: map[string]string{"Content-Type": "application/json"},
-		Body:    []byte(body),
-	})
-	if err != nil {
-		pdk.Log(pdk.LogInfo, fmt.Sprintf("ListenBrainz MBID lookup request failed: %v", err))
-		return ""
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		pdk.Log(pdk.LogDebug, fmt.Sprintf("ListenBrainz MBID lookup failed: HTTP %d, body=%s", resp.StatusCode, string(resp.Body)))
-		return ""
-	}
-	id := parseSpotifyID(resp.Body)
-	if id == "" {
-		pdk.Log(pdk.LogDebug, fmt.Sprintf("ListenBrainz MBID lookup returned no spotify_track_id for mbid=%s, body=%s", mbid, string(resp.Body)))
-	}
-	return id
-}
-
-// trySpotifyFromMetadata calls the ListenBrainz spotify-id-from-metadata endpoint.
-func trySpotifyFromMetadata(artist, title, album string) string {
-	payload := fmt.Sprintf(`[{"artist_name":%q,"track_name":%q,"release_name":%q}]`, artist, title, album)
-
-	pdk.Log(pdk.LogDebug, fmt.Sprintf("ListenBrainz metadata request: %s", payload))
-
-	resp, err := host.HTTPSend(host.HTTPRequest{
-		Method:  "POST",
-		URL:     "https://labs.api.listenbrainz.org/spotify-id-from-metadata/json",
-		Headers: map[string]string{"Content-Type": "application/json"},
-		Body:    []byte(payload),
-	})
-	if err != nil {
-		pdk.Log(pdk.LogInfo, fmt.Sprintf("ListenBrainz metadata lookup request failed: %v", err))
-		return ""
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		pdk.Log(pdk.LogDebug, fmt.Sprintf("ListenBrainz metadata lookup failed: HTTP %d, body=%s", resp.StatusCode, string(resp.Body)))
-		return ""
-	}
-	pdk.Log(pdk.LogDebug, fmt.Sprintf("ListenBrainz metadata response: HTTP %d, body=%s", resp.StatusCode, string(resp.Body)))
-	id := parseSpotifyID(resp.Body)
-	if id == "" {
-		pdk.Log(pdk.LogDebug, fmt.Sprintf("ListenBrainz metadata returned no spotify_track_id for %q - %q", artist, title))
-	}
-	return id
-}
-
-// parseSpotifyID extracts the first spotify track ID from a ListenBrainz Labs JSON response.
-// The response is an array of objects with spotify_track_ids arrays; we take the first non-empty ID.
-func parseSpotifyID(body []byte) string {
-	var results []listenBrainzResult
-	if err := json.Unmarshal(body, &results); err != nil {
-		return ""
-	}
-	for _, r := range results {
-		for _, id := range r.SpotifyTrackIDs {
-			if isValidSpotifyID(id) {
-				return id
-			}
-		}
-	}
-	return ""
-}
-
-// isValidSpotifyID checks that a Spotify track ID is non-empty and contains only base-62 characters.
-func isValidSpotifyID(id string) bool {
-	if len(id) == 0 {
-		return false
-	}
-	for i := 0; i < len(id); i++ {
-		c := id[i]
-		if !((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
-			return false
-		}
-	}
-	return true
 }
 
 // resolveSpotifyURL resolves a direct Spotify track URL via ListenBrainz Labs,
