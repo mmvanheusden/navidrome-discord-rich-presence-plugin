@@ -201,7 +201,7 @@ func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequ
 		LargeText:  input.Track.Album,
 		LargeURL:   spotifyURL,
 		SmallImage: navidromeSmallLogoURL,
-		SmallText:  "Powered by Navidrome",
+		SmallText:  "Served by Navidrome",
 		SmallURL:   navidromeWebsiteURL,
 	}
 
@@ -209,6 +209,7 @@ func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequ
 		ts = activityTimestamps{Start: input.Timestamp * 1000}
 		assets.SmallImage = pauseIconURL
 		assets.SmallText = "Paused"
+		assets.SmallURL = ""
 	}
 
 	return rpc.sendActivity(clientID, input.Username, userToken, activity{

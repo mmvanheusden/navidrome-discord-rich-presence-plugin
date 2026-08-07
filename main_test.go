@@ -189,7 +189,7 @@ var _ = Describe("discordPlugin", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(sentPayload).To(ContainSubstring(`"small_image"`))
-				Expect(sentPayload).To(ContainSubstring(`Powered by Navidrome`))
+				Expect(sentPayload).To(ContainSubstring(`Served by Navidrome`))
 				Expect(sentPayload).To(ContainSubstring(`"start":`))
 				Expect(sentPayload).To(ContainSubstring(`"end":`))
 			})
