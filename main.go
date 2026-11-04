@@ -30,6 +30,7 @@ const (
 	spotifyLinksKey         = "spotifylinks"
 	caaEnabledKey           = "caaenabled"
 	uguuEnabledKey          = "uguuenabled"
+	clearOnPauseKey         = "clearonpause"
 )
 
 const (
@@ -173,12 +174,21 @@ func formatRequest(input scrobbler.PlaybackReportRequest) string {
 
 func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequest) error {
 	paused := input.State == statePaused
-	pdk.Log(pdk.LogInfo, fmt.Sprintf("Setting presence for user %s, track: %s (paused=%v)", input.Username, input.Track.Title, paused))
 
 	clientID, userConfig, err := connectUser(input.Username)
 	if err != nil {
 		return err
 	}
+
+	clearOnPauseEnabled, _ := pdk.GetConfig(clearOnPauseKey)
+	clearOnPause := clearOnPauseEnabled == "true"
+
+	if clearOnPause && paused {
+		pdk.Log(pdk.LogInfo, fmt.Sprintf("Clearing presence for user %s, track: %s (paused=%v, clearOnPause=%v)", input.Username, input.Track.Title, paused, clearOnPause))
+		return rpc.clearActivity(input.Username)
+	}
+
+	pdk.Log(pdk.LogInfo, fmt.Sprintf("Setting presence for user %s, track: %s (paused=%v)", input.Username, input.Track.Title, paused))
 
 	activityName, statusDisplayType := resolveActivityName(input.Track)
 
