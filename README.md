@@ -20,6 +20,7 @@ Based on the [Navicord](https://github.com/logixism/navicord) project.
 - Playback rate-aware timestamps (correct elapsed/remaining for audiobooks at 2x, etc.)
 - Clickable track title and artist name link to Spotify (direct track link via [ListenBrainz](https://listenbrainz.org), falls back to Spotify search)
 - Clickable album art links to the Spotify track page
+- Optional clickable Navidrome share link for the current track
 - Customizable activity name: "Navidrome" is default, but can be configured to display track title, artist, or album
 - Displays playback progress with start/end timestamps
 - Automatic presence clearing when playback stops
@@ -55,6 +56,7 @@ We don't provide instructions for obtaining the token as it may violate Discord'
    - **Use artwork from Cover Art Archive**: Enable this if your music has MusicBrainz tags (see Album Art section below)
    - **Upload to uguu.se**: Enable this if your Navidrome isn't publicly accessible (see Album Art section below)
    - **Enable Spotify link-through**: Enable this to make track title and album art clickable links to Spotify
+   - **Enable Navidrome share links**: Enable this to make the "Served by Navidrome" button open a public share for the current track
    - **Clear activity on pause**: Enable this to clear your activity when you pause
    - **Users**: Add your Navidrome username and Discord token from Step 3
 
@@ -162,6 +164,12 @@ Access the plugin configuration in Navidrome: **Settings > Plugins > Discord Ric
 - **What it does**: When enabled, clicking the track title or album art in Discord opens the corresponding Spotify page
 - **How it works**: Track URLs are resolved via [ListenBrainz Labs](https://labs.api.listenbrainz.org) for direct Spotify links, falling back to Spotify search when no match is found
 
+#### Enable Navidrome Share Links
+- **Default**: Disabled
+- **What it does**: When enabled, clicking the "Served by Navidrome" button in Discord opens a public Navidrome share for the currently playing track
+- **How it works**: Creates a share through Navidrome's Subsonic API and caches the returned URL per user and track for 30 days. The user must have permission to create shares, and sharing must be enabled in Navidrome.
+- **Note**: This creates a share entry for each track that gets played
+
 #### Clear activity on pause
 - **Default**: Disabled
 - **What it does**: When enabled, pausing playback clears the Discord activity instead of displaying the paused icon and duration
@@ -192,7 +200,7 @@ The plugin implements three Navidrome capabilities:
 | **Cache**       | Sequence numbers, processed image URLs, resolved Spotify URLs                                        |
 | **Scheduler**   | Recurring heartbeats                                                                                 |
 | **Artwork**     | Track artwork public URL resolution                                                                  |
-| **SubsonicAPI** | Fetches track artwork data for image hosting upload                                                  |
+| **SubsonicAPI** | Fetches track artwork data for image hosting upload and creates Navidrome share links                                |
 
 ### Flow
 

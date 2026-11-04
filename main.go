@@ -13,8 +13,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
+	"github.com/navidrome/navidrome/plugins/pdk/go/host"
 	"github.com/navidrome/navidrome/plugins/pdk/go/pdk"
 	"github.com/navidrome/navidrome/plugins/pdk/go/scheduler"
 	"github.com/navidrome/navidrome/plugins/pdk/go/scrobbler"
@@ -28,6 +30,7 @@ const (
 	activityNameKey         = "activityname"
 	activityNameTemplateKey = "activitynametemplate"
 	spotifyLinksKey         = "spotifylinks"
+	navidromeShareLinksKey  = "navidromesharelinks"
 	caaEnabledKey           = "caaenabled"
 	uguuEnabledKey          = "uguuenabled"
 	clearOnPauseKey         = "clearonpause"
@@ -207,13 +210,15 @@ func (p *discordPlugin) handlePlayingOrPaused(input scrobbler.PlaybackReportRequ
 		Start: input.Timestamp*1000 - wallElapsedMs,
 		End:   input.Timestamp*1000 - wallElapsedMs + wallDurationMs,
 	}
+	shareURL := resolveNavidromeShareURL(input.Username, input.Track.ID)
+
 	assets := activityAssets{
 		LargeImage: getImageURL(input.Username, input.Track),
 		LargeText:  input.Track.Album,
 		LargeURL:   spotifyURL,
 		SmallImage: navidromeSmallLogoURL,
 		SmallText:  "Served by Navidrome",
-		SmallURL:   navidromeWebsiteURL,
+		SmallURL:   shareURL,
 	}
 
 	if paused {
@@ -310,6 +315,113 @@ func resolveSpotifyLinks(track scrobbler.TrackInfo) (string, string) {
 		return "", ""
 	}
 	return resolveSpotifyURL(track), spotifySearchURL(track.Artist)
+}
+
+// ============================================================================
+// Navidrome Share Links
+// ============================================================================
+
+// navidromeShareCacheTTL keeps a generated share link around for a month so
+// repeated playback reports for the same track don't create duplicate shares.
+const navidromeShareCacheTTL int64 = 30 * 24 * 60 * 60
+
+// resolveNavidromeShareURL returns the URL for the small "Served by Navidrome"
+// button. When share links are disabled, it falls back to the Navidrome website.
+func resolveNavidromeShareURL(username, trackID string) string {
+	shareLinksOption, _ := pdk.GetConfig(navidromeShareLinksKey)
+	if shareLinksOption != "true" {
+		return navidromeWebsiteURL
+	}
+
+	shareURL, err := getNavidromeShareURL(username, trackID)
+	if err != nil {
+		pdk.Log(pdk.LogWarn, fmt.Sprintf("Failed to generate Navidrome share link for track %s: %v", trackID, err))
+		return navidromeWebsiteURL
+	}
+	return shareURL
+}
+
+// subsonicShareResponse mirrors the subset of the Subsonic createShare response
+// needed to retrieve the generated share URL.
+type subsonicShareResponse struct {
+	SubsonicResponse struct {
+		Status string         `json:"status"`
+		Error  *subsonicError `json:"error,omitempty"`
+		Shares *struct {
+			Share []struct {
+				ID  string `json:"id"`
+				URL string `json:"url"`
+			} `json:"share"`
+		} `json:"shares,omitempty"`
+	} `json:"subsonic-response"`
+}
+
+type subsonicError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// getNavidromeShareURL returns a cached share link for the track, creating one
+// through the Subsonic API on a cache miss.
+func getNavidromeShareURL(username, trackID string) (string, error) {
+	if username == "" || trackID == "" {
+		return "", fmt.Errorf("username and track ID are required to create a Navidrome share link")
+	}
+
+	cacheKey := "navidrome.share." + hashKey(username+"\x00"+trackID)
+	if cached, exists, err := host.CacheGetString(cacheKey); err == nil && exists && cached != "" {
+		return cached, nil
+	}
+
+	shareURL, err := generateNavidromeShareLink(username, trackID)
+	if err != nil {
+		return "", err
+	}
+
+	_ = host.CacheSetString(cacheKey, shareURL, navidromeShareCacheTTL)
+	return shareURL, nil
+}
+
+// generateNavidromeShareLink creates a public share for the given track and
+// returns the URL Navidrome generated for it. The share is created on behalf of
+// username, which must be configured for this plugin and allowed to create shares.
+func generateNavidromeShareLink(username, trackID string) (string, error) {
+	if username == "" {
+		return "", fmt.Errorf("username is required to create a Navidrome share link")
+	}
+	if trackID == "" {
+		return "", fmt.Errorf("track ID is required to create a Navidrome share link")
+	}
+
+	params := url.Values{}
+	params.Set("u", username)
+	params.Set("id", trackID)
+
+	responseJSON, err := host.SubsonicAPICall("createShare?" + params.Encode())
+	if err != nil {
+		return "", fmt.Errorf("failed to create Navidrome share: %w", err)
+	}
+
+	var response subsonicShareResponse
+	if err := json.Unmarshal([]byte(responseJSON), &response); err != nil {
+		return "", fmt.Errorf("failed to parse Navidrome share response: %w", err)
+	}
+
+	sub := response.SubsonicResponse
+	if sub.Status != "ok" {
+		if sub.Error != nil {
+			return "", fmt.Errorf("failed to create Navidrome share: %s (code %d)", sub.Error.Message, sub.Error.Code)
+		}
+		return "", fmt.Errorf("failed to create Navidrome share: unexpected status %q", sub.Status)
+	}
+	if sub.Shares == nil || len(sub.Shares.Share) == 0 {
+		return "", fmt.Errorf("failed to create Navidrome share: no share returned")
+	}
+	if sub.Shares.Share[0].URL == "" {
+		return "", fmt.Errorf("failed to create Navidrome share: empty share URL")
+	}
+
+	return sub.Shares.Share[0].URL, nil
 }
 
 // ============================================================================

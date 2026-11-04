@@ -143,19 +143,33 @@ var _ = Describe("discordPlugin", func() {
 			host.SchedulerMock.On("ScheduleRecurring", mock.Anything, payloadHeartbeat, "testuser").Return("testuser", nil)
 		}
 
-		setupConfigMocks := func() {
+		setupConfigMocks := func(navidromeShareLinks ...string) {
+			shareLinks := "true"
+			if len(navidromeShareLinks) > 0 {
+				shareLinks = navidromeShareLinks[0]
+			}
 			pdk.PDKMock.On("GetConfig", clientIDKey).Return("test-client-id", true)
 			pdk.PDKMock.On("GetConfig", usersKey).Return(`[{"username":"testuser","token":"test-token"}]`, true)
 			pdk.PDKMock.On("GetConfig", uguuEnabledKey).Return("", false)
 			pdk.PDKMock.On("GetConfig", caaEnabledKey).Return("", false)
 			pdk.PDKMock.On("GetConfig", activityNameKey).Return("", false)
 			pdk.PDKMock.On("GetConfig", spotifyLinksKey).Return("", false)
+			pdk.PDKMock.On("GetConfig", navidromeShareLinksKey).Return(shareLinks, true)
 			pdk.PDKMock.On("GetConfig", clearOnPauseKey).Return("", false)
 		}
 
 		setupImageMocks := func() {
 			host.CacheMock.On("GetString", discordImageKey).Return("", false, nil)
 			host.CacheMock.On("SetString", discordImageKey, mock.Anything, mock.Anything).Return(nil)
+			host.CacheMock.On("GetString", mock.MatchedBy(func(key string) bool {
+				return strings.HasPrefix(key, "navidrome.share.")
+			})).Return("", false, nil)
+			host.CacheMock.On("SetString", mock.MatchedBy(func(key string) bool {
+				return strings.HasPrefix(key, "navidrome.share.")
+			}), "https://example.com/share/share1", navidromeShareCacheTTL).Return(nil)
+			host.SubsonicAPIMock.On("Call", mock.MatchedBy(func(uri string) bool {
+				return strings.HasPrefix(uri, "createShare?")
+			})).Return(`{"subsonic-response":{"status":"ok","shares":{"share":[{"id":"share1","url":"https://example.com/share/share1"}]}}}`, nil)
 			host.ArtworkMock.On("GetTrackUrl", "track1", int32(300)).Return("https://example.com/art.jpg", nil)
 			host.HTTPMock.On("Send", externalAssetsReq).Return(&host.HTTPResponse{StatusCode: 200, Body: []byte(`[{"external_asset_path":"external/art"}]`)}, nil)
 		}
@@ -199,8 +213,25 @@ var _ = Describe("discordPlugin", func() {
 
 				Expect(sentPayload).To(ContainSubstring(`"small_image"`))
 				Expect(sentPayload).To(ContainSubstring(`Served by Navidrome`))
+				Expect(sentPayload).To(ContainSubstring(`"small_url":"https://example.com/share/share1"`))
 				Expect(sentPayload).To(ContainSubstring(`"start":`))
 				Expect(sentPayload).To(ContainSubstring(`"end":`))
+			})
+
+			It("links the small overlay to the Navidrome website when share links are disabled", func() {
+				setupConfigMocks("")
+				setupConnectMocks()
+				setupImageMocks()
+
+				var sentPayload string
+				host.WebSocketMock.On("SendText", "testuser", mock.Anything).Run(func(args mock.Arguments) {
+					sentPayload = args.Get(1).(string)
+				}).Return(nil)
+
+				err := plugin.PlaybackReport(baseRequest("playing"))
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(sentPayload).To(ContainSubstring(fmt.Sprintf(`"small_url":"%s"`, navidromeWebsiteURL)))
 			})
 
 			It("adjusts end time for non-1.0 playback rate", func() {
@@ -303,6 +334,7 @@ var _ = Describe("discordPlugin", func() {
 				pdk.PDKMock.On("GetConfig", caaEnabledKey).Return("", false)
 				pdk.PDKMock.On("GetConfig", activityNameKey).Return(configValue, configExists)
 				pdk.PDKMock.On("GetConfig", spotifyLinksKey).Return("", false)
+				pdk.PDKMock.On("GetConfig", navidromeShareLinksKey).Return("true", true)
 				pdk.PDKMock.On("GetConfig", clearOnPauseKey).Return("", false)
 
 				setupConnectMocks()
@@ -334,6 +366,7 @@ var _ = Describe("discordPlugin", func() {
 				pdk.PDKMock.On("GetConfig", activityNameKey).Return("Custom", true)
 				pdk.PDKMock.On("GetConfig", activityNameTemplateKey).Return(template, templateExists)
 				pdk.PDKMock.On("GetConfig", spotifyLinksKey).Return("", false)
+				pdk.PDKMock.On("GetConfig", navidromeShareLinksKey).Return("true", true)
 				pdk.PDKMock.On("GetConfig", clearOnPauseKey).Return("", false)
 
 				setupConnectMocks()

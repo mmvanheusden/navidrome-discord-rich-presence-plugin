@@ -34,7 +34,7 @@
       "reason": "To get track artwork URLs for rich presence display"
     },
     "subsonicapi": {
-      "reason": "To fetch track artwork data for image hosting upload"
+      "reason": "To fetch track artwork data for image hosting upload and create Navidrome share links"
     }
   },
   "config": {
@@ -83,6 +83,12 @@
           "type": "boolean",
           "title": "Enable Spotify link-through",
           "description": "When enabled, clicking the track title or album art in Discord opens the corresponding Spotify page",
+          "default": false
+        },
+        "navidromesharelinks": {
+          "type": "boolean",
+          "title": "Enable Navidrome share links",
+          "description": "When enabled, clicking the 'Served by Navidrome' button in Discord opens a public Navidrome share for the current track. This creates a share per track.",
           "default": false
         },
         "clearonpause": {
@@ -183,6 +189,10 @@
         {
           "type": "Control",
           "scope": "#/properties/spotifylinks"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/navidromesharelinks"
         },
         {
           "type": "Control",
